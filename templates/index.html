@@ -74,7 +74,14 @@
 						{% endfor %}
 					]
 					$table.bootstrapTable({data: data, stickyHeader: true,})
-				})
+				});
+
+				$table.on('click-row.bs.table', function (row, $element, field) {
+					if (confirm('View the paper: ' + $element.title + '?')) {
+						// Open the paper page in a new tab
+						window.open($element.link);
+					}
+				});
 			</script>
 		</div>
 	</body>
