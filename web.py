@@ -58,7 +58,8 @@ class FlaskApp(object):
     def fetch(self):
         thread = threading.Thread(target=self.get_feed, name="Get RSS Feed")
         thread.start()
-        return self.index(alert='Fetch started ...', alert_type=AlertType.INFO)
+        thread.join()
+        return self.alert
 
     def strip_tags(self, html):
         s = MLStripper()
@@ -74,21 +75,25 @@ class FlaskApp(object):
         # Iterate over results one-by-one
         for p in d.entries:
             pid = p.id
-            res = c.execute("SELECT COUNT(*) FROM papers WHERE id = '{pid}'")
+            sql = f"SELECT COUNT(*) FROM papers WHERE id = '{pid}'"
+            res = c.execute(sql)
+            print(f'Checking: {sql}')
             cnt = res.fetchone()[0]
             if cnt > 0:
                 # We found a match, since records are in order, no need to go through rest
+                print(f'Match found. Exiting loop.')
                 break
             # If we got here, there was no match - must add record to DB. Clean data first
             author = self.strip_tags(p.author)
             summary = self.strip_tags(p.summary)
+            max = min(512, len(summary) / 2)
             # Get summary
             if self.summarizer is None:
                 self.summarizer = pipeline("summarization", "pszemraj/long-t5-tglobal-base-16384-book-summary")
-            brief = self.summarizer(summary)[0]['summary_text']
+            brief = self.summarizer(summary, max_length=max)[0]['summary_text']
             # Set up SQL
             sql = f'INSERT INTO papers(id, title, category, link, summary, author, brief, created) VALUES (' \
-                '"{p.id}", "{p.title}", "cs.CV", "{p.link}", "{summary}", "{author}", "{brief}", datetime("now"))'
+                f'"{p.id}", "{p.title}", "cs.CV", "{p.link}", "{summary}", "{author}", "{brief}", datetime("now"))'
             # Add record
             try:
                 c.execute(sql)
@@ -97,19 +102,19 @@ class FlaskApp(object):
             except:
                 print(f'Error saving data: {sql}')
         # Close DB connection
+        print(f'Processed {count} papers.')
         conn.close()
         # Update view with message
         if count == 0:
-            msg = 'Did not fetch any new papers.'
+            self.alert = 'Did not fetch any new papers.'
         else:
-            msg = f'Added {count} papers to the list.'
-        return self.index(alert=msg, alert_type=AlertType.SUCCESS)
+            self.alert = f'Added {count} papers to the list.'
 
 flask = Flask(__name__)
 app = FlaskApp(flask)
 # Add endpoints for the action function
 app.add_endpoint('/', 'index', app.index, methods=['GET'])
-app.add_endpoint('/fetch', 'fetch', app.fetch, methods=['GET'])
+app.add_endpoint('/fetch', 'fetch', app.fetch, methods=['POST'])
 
 if __name__ == "__main__":
     app.run()

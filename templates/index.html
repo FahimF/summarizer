@@ -18,19 +18,29 @@
 		<div class="container">
 			<h1>Papers</h1>
 			<div class="actions">
-				{% if alert.1 != 0 %}
-					{% if alert.1 == 'DANGER' %}
-						<div class="alert alert-danger">{{ alert.0 }}</div>
-					{% elif alert.1 == 'INFO' %}
-						<div class="alert alert-info">{{ alert.0 }}</div>
-					{% elif alert.1 == 'SUCCESS' %}
-						<div class="alert alert-success">{{ alert.0 }}</div>
-					{% elif alert.1 == 'WARNING' %}
-						<div class="alert alert-warning">{{ alert.0 }}</div>
-					{% endif %}
-				{% endif %}
-				<a href="/fetch" class="btn btn-secondary" role="button">Update</a>
+				<div id="alert_cont"></div>
+				<a id="btnUpdate" class="btn btn-secondary" role="button" onclick="update()">Update</a>
 			</div>
+			<script>
+				function update() {
+					show('Started updating papers ...', 'alert-info')
+					$.ajax({url: "/fetch", type: "post",
+						success: function(response) {
+							show(response, 'alert-success')
+						},
+						error: function(xhr, status, errorThrown) {
+							show(xhr.responseText, 'alert-danger')
+						}
+					});
+				}
+
+				function show(message, type) {
+					var html = '<div class="alert ' + type + ' alert-dismissible fade show" role="alert">' +
+						message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">' +
+						'</button></div>';
+					$('#alert_cont').html(html);
+				}
+			</script>
 			<div style="clear: both;"></div>
 			<table id="table" data-show-columns="true" data-pagination="true" data-search="true" data-show-jump-to="true">
 				<thead>
