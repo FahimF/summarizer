@@ -12,6 +12,24 @@ The basic UI can be seen below:
 
 ![web-app](assets/web-app.jpg)
 
+## Installation
+
+Simply clone the repo to a local folder, install the required packages (if you don't have them already) and then run the following command from terminal:
+
+```bash
+python web.py
+```
+
+This should start a local web server that you can access via the URL that you'll see in the terminal. Just navigate to the URL and you should be set!
+
+## What are the required packages?
+
+You should be able to install the required packages by running the following command in terminal:
+
+```bash
+pip install feedparser torch transformers Flask
+```
+
 ## How does it work?
 
 The app fetches the RSS feed for the hardcoded category (cs.CV) and then compares each paper against those already in the database. Any paper which is not found in the database has its description passed through the summarizer which uses [this model](https://huggingface.co/pszemraj/long-t5-tglobal-base-16384-book-summary).
