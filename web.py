@@ -70,25 +70,31 @@ class FlaskApp(object):
             res = c.execute(sql)
             # print(f'Checking: {sql}')
             cnt = res.fetchone()[0]
+            pid = pid.replace('http://arxiv.org/abs/', '')
             if cnt > 0:
                 # We found a match, but records are not in order, so need to loop through all records
-                pid = pid.replace('http://arxiv.org/abs/', '')
                 print(f'Match found. Skipping {pid}')
                 continue
             # If we got here, there was no match - must add record to DB. Clean data first
             author = self.strip_tags(p.author)
             summary = self.strip_tags(p.summary)
-            max = min(512, len(summary) / 2)
-            # Get summary
+            # Set up summarizer, if necessary
             if self.summarizer is None:
                 self.summarizer = pipeline("summarization", "pszemraj/long-t5-tglobal-base-16384-book-summary")
+                self.tokenizer = self.summarizer.tokenizer
+            # Get token count, to configure summarizer
+            toks = self.tokenizer.tokenize(summary)
+            cnt = len(toks)
+            max = min(512, int(cnt / 2))
+            # Get summary
             brief = self.summarizer(summary, max_length=max)[0]['summary_text']
             # Set up SQL
-            sql = f'INSERT INTO papers(id, title, category, link, summary, author, brief, created) VALUES (' \
-                f'"{p.id}", "{p.title}", "cs.CV", "{p.link}", "{summary}", "{author}", "{brief}", datetime("now"))'
+            sql = 'INSERT INTO papers(id, title, category, link, summary, author, brief, created) VALUES (' \
+                '?, ?, "cs.CV", ?, ?, ?, ?, datetime("now"))'
             # Add record
             try:
-                c.execute(sql)
+                print(f'Adding record for: {pid}')
+                c.execute(sql, (p.id, p.title, p.link, summary, author, brief))
                 conn.commit()
                 count += 1
             except:
