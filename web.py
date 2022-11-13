@@ -62,7 +62,7 @@ class FlaskApp(object):
         # Get DB connection
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
-        count = 0
+        added = []
         # Iterate over results one-by-one
         for p in d.entries:
             pid = p.id
@@ -96,17 +96,18 @@ class FlaskApp(object):
                 print(f'Adding record for: {pid}')
                 c.execute(sql, (p.id, p.title, p.link, summary, author, brief))
                 conn.commit()
-                count += 1
+                added.append(pid)
             except:
                 print(f'Error saving data: {sql}')
         # Close DB connection
-        print(f'Processed {count} papers.')
+        print(f'Processed {len(added)} papers.')
         conn.close()
         # Update view with message - returned from fetch()
+        count = len(added)
         if count == 0:
             self.alert = 'Did not fetch any new papers.'
         else:
-            self.alert = f'Added {count} papers to the list.'
+            self.alert = f'Added {count} papers to the list: ' + ', '.join(added) + '. Refresh to load them.'
 
 flask = Flask(__name__)
 app = FlaskApp(flask)
