@@ -45,6 +45,7 @@
 			<table id="table" data-show-columns="true" data-pagination="true" data-search="true" data-show-jump-to="true">
 				<thead>
 					<tr>
+						<th data-field="id" data-sortable="true" data-width="100">ID</th>
 						<th data-field="title" data-sortable="true" data-width="325">Title</th>
 						<th data-field="author" data-sortable="true" data-width="260">Authors</th>
 						<th data-field="brief">Summary</th>
@@ -73,7 +74,7 @@
 							},
 						{% endfor %}
 					]
-					$table.bootstrapTable({data: data, stickyHeader: true,})
+					$table.bootstrapTable({data: data, stickyHeader: true, sortReset: true})
 				});
 
 				$table.on('click-row.bs.table', function (row, $element, field) {

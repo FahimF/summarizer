@@ -2,19 +2,11 @@ import feedparser
 import threading
 import pandas as pd
 import sqlite3
-import torch
 
-from enum import Enum
 from flask import Flask, render_template
 from html.parser import HTMLParser
 from io import StringIO
 from transformers import pipeline
-
-class AlertType(Enum):
-    DANGER = 1
-    INFO = 2
-    SUCCESS = 3
-    WARNING = 4
 
 class MLStripper(HTMLParser):
     def __init__(self):
@@ -34,7 +26,6 @@ class FlaskApp(object):
     def __init__(self, app, **configs):
         self.app = app
         self.configs(**configs)
-        # self.device = torch.device('cuda' if torch.cuda.is_available else 'mps' if torch.has_mps else 'cpu')
 
     def configs(self, **configs):
         for config, value in configs:
@@ -46,14 +37,14 @@ class FlaskApp(object):
     def run(self, **kwargs):
         self.app.run(**kwargs)
 
-    def index(self, alert: str = '', alert_type: AlertType = None):
+    def index(self):
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
-        c.execute("SELECT title, link, author, brief FROM papers")
-        df = pd.DataFrame(c.fetchall(), columns=['title','link', 'author', 'brief'])
+        c.execute("SELECT id, title, link, author, brief FROM papers")
+        df = pd.DataFrame(c.fetchall(), columns=['id', 'title','link', 'author', 'brief'])
         conn.close()
-        msg = ('', 0) if len(alert) == 0 else (alert, alert_type.name)
-        return render_template('index.html', data=df.to_dict('records'), alert=msg)
+        df['id'] = [i.replace('http://arxiv.org/abs/', '') for i in list(df['id'])]
+        return render_template('index.html', data=df.to_dict('records'))
 
     def fetch(self):
         thread = threading.Thread(target=self.get_feed, name="Get RSS Feed")
@@ -77,12 +68,13 @@ class FlaskApp(object):
             pid = p.id
             sql = f"SELECT COUNT(*) FROM papers WHERE id = '{pid}'"
             res = c.execute(sql)
-            print(f'Checking: {sql}')
+            # print(f'Checking: {sql}')
             cnt = res.fetchone()[0]
             if cnt > 0:
-                # We found a match, since records are in order, no need to go through rest
-                print(f'Match found. Exiting loop.')
-                break
+                # We found a match, but records are not in order, so need to loop through all records
+                pid = pid.replace('http://arxiv.org/abs/', '')
+                print(f'Match found. Skipping {pid}')
+                continue
             # If we got here, there was no match - must add record to DB. Clean data first
             author = self.strip_tags(p.author)
             summary = self.strip_tags(p.summary)
@@ -104,7 +96,7 @@ class FlaskApp(object):
         # Close DB connection
         print(f'Processed {count} papers.')
         conn.close()
-        # Update view with message
+        # Update view with message - returned from fetch()
         if count == 0:
             self.alert = 'Did not fetch any new papers.'
         else:
