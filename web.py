@@ -22,6 +22,8 @@ class MLStripper(HTMLParser):
 
 class FlaskApp(object):
     summarizer = None
+    # arXiv category to fetch
+    category = 'cs.CV'
 
     def __init__(self, app, **configs):
         self.app = app
@@ -40,8 +42,8 @@ class FlaskApp(object):
     def index(self):
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
-        c.execute("SELECT id, title, link, author, brief FROM papers")
-        df = pd.DataFrame(c.fetchall(), columns=['id', 'title','link', 'author', 'brief'])
+        c.execute("SELECT id, created, title, link, author, brief FROM papers")
+        df = pd.DataFrame(c.fetchall(), columns=['id', 'created', 'title','link', 'author', 'brief'])
         conn.close()
         df['id'] = [i.replace('http://arxiv.org/abs/', '') for i in list(df['id'])]
         return render_template('index.html', data=df.to_dict('records'))
@@ -58,11 +60,12 @@ class FlaskApp(object):
         return s.get_data()
 
     def get_feed(self):
-        d = feedparser.parse(r'http://arxiv.org/rss/cs.CV')
+        d = feedparser.parse(f'http://arxiv.org/rss/{self.category}')
         # Get DB connection
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
         added = []
+        skipped = 0
         # Iterate over results one-by-one
         for p in d.entries:
             pid = p.id
@@ -73,7 +76,8 @@ class FlaskApp(object):
             pid = pid.replace('http://arxiv.org/abs/', '')
             if cnt > 0:
                 # We found a match, but records are not in order, so need to loop through all records
-                print(f'Match found. Skipping {pid}')
+                # print(f'Match found. Skipping {pid}')
+                skipped +=1
                 continue
             # If we got here, there was no match - must add record to DB. Clean data first
             author = self.strip_tags(p.author)
@@ -90,7 +94,7 @@ class FlaskApp(object):
             brief = self.summarizer(summary, max_length=max)[0]['summary_text']
             # Set up SQL
             sql = 'INSERT INTO papers(id, title, category, link, summary, author, brief, created) VALUES (' \
-                '?, ?, "cs.CV", ?, ?, ?, ?, datetime("now"))'
+                f'?, ?, "{self.category}", ?, ?, ?, ?, datetime("now"))'
             # Add record
             try:
                 print(f'Adding record for: {pid}')
@@ -100,10 +104,10 @@ class FlaskApp(object):
             except:
                 print(f'Error saving data: {sql}')
         # Close DB connection
-        print(f'Processed {len(added)} papers.')
+        count = len(added)
+        print(f'Added: {count} and skipped: {skipped}  papers.')
         conn.close()
         # Update view with message - returned from fetch()
-        count = len(added)
         if count == 0:
             self.alert = 'Did not fetch any new papers.'
         else:
