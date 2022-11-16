@@ -42,7 +42,7 @@ class FlaskApp(object):
     def index(self):
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
-        c.execute("SELECT id, created, title, link, author, brief FROM papers")
+        c.execute("SELECT id, created, title, link, author, brief FROM papers ORDER BY created DESC")
         df = pd.DataFrame(c.fetchall(), columns=['id', 'created', 'title','link', 'author', 'brief'])
         conn.close()
         df['id'] = [i.replace('http://arxiv.org/abs/', '') for i in list(df['id'])]
