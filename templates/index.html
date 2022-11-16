@@ -20,18 +20,19 @@
 			<div class="actions">
 				<div id="alert_cont"></div>
 				<a id="btnUpdate" class="btn btn-secondary" role="button" onclick="update()">Update</a>
+				<a id="btnDelete" class="btn btn-secondary" role="button">Delete</a>
 			</div>
 			<script>
 				function update() {
 					show('Started updating papers ...', 'alert-info')
-					$.ajax({url: "/fetch", type: "post",
+					$.ajax({url: "/fetch", type: "POST",
 						success: function(response) {
 							show(response, 'alert-success')
 						},
 						error: function(xhr, status, errorThrown) {
 							show(xhr.responseText, 'alert-danger')
 						}
-					});
+					})
 				}
 
 				function show(message, type) {
@@ -46,6 +47,7 @@
 				data-show-jump-to="true" data-sort-name="created" data-sort-order="desc">
 				<thead>
 					<tr>
+						<th data-checkbox="true"></th>
 						<th data-field="id" data-sortable="true" data-width="100">ID</th>
 						<th data-field="created" data-sortable="true" data-width="60">Added On</th>
 						<th data-field="title" data-sortable="true" data-width="325">Title</th>
@@ -65,6 +67,7 @@
 			<script src="https://unpkg.com/bootstrap-table@1.21.0/dist/extensions/sticky-header/bootstrap-table-sticky-header.min.js"></script>
 			<script>
 				var $table = $('#table')
+				var $btnDel = $('#btnDelete')
 
 				$(function() {
 					var data = [
@@ -76,15 +79,40 @@
 							},
 						{% endfor %}
 					]
+
 					$table.bootstrapTable({data: data, stickyHeader: true, sortReset: true})
-				});
+				})
 
 				$table.on('click-row.bs.table', function (row, $element, field) {
 					if (confirm('View the paper: ' + $element.title + '?')) {
 						// Open the paper page in a new tab
-						window.open($element.link);
+						window.open($element.link)
 					}
-				});
+				})
+
+				$btnDel.click(function () {
+					var json = $table.bootstrapTable('getSelections')
+					if (json.length == 0) {
+						alert('No papers selected! Please select papers before trying to Delete.')
+						return
+					}
+					var list = ""
+					json.forEach(item => {
+						if (list.length == 0) {
+							list = "'http://arxiv.org/abs/" + item.id + "'"
+						} else {
+							list = list + ", 'http://arxiv.org/abs/" + item.id + "'"
+						}
+					})
+					$.ajax({url: "/drop", type: "POST", contentType: 'application/json', data: {"items": list},
+						success: function(response) {
+							show(response, 'alert-success')
+						},
+						error: function(xhr, status, errorThrown) {
+							show(xhr.responseText, 'alert-danger')
+						}
+					})
+				})
 			</script>
 		</div>
 	</body>
