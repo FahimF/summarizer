@@ -35,20 +35,7 @@
 				<a id="btnHide" class="btn btn-info" role="button" data-bs-toggle="tooltip"
 					data-bs-title="Hide selected/checked papers so that they don't appear in the list">Hide</a>
 				<a id="btnDelete" class="btn btn-danger" role="button" data-bs-toggle="tooltip"
-					data-bs-title="Delete selected/checked papers so that they are removed permanently">Delete</a>
-				<div class="dropdown">
-					<button class="btn btn-info dropdown-toggle" type="button" id="btnDelType"
-						data-bs-toggle="dropdown" aria-expanded="false">
-						Selected Papers
-						<span class="caret"></span>
-					</button>
-					<ul class="dropdown-menu">
-						<li><a class="dropdown-item" href="#">Selected Papers</a></li>
-						<li><a class="dropdown-item" href="#">Added Yesterday</a></li>
-						<li><a class="dropdown-item" href="#">Added Day Before</a></li>
-						<li><a class="dropdown-item" href="#">Added 7+ Days Ago</a></li>
-					</ul>
-				</div>
+					data-bs-title="Delete hidden papers older than a week so that they are removed permanently">Delete</a>
 			</div>
 			<script>
 				function update() {
@@ -96,7 +83,7 @@
 			<script>
 				var $table = $('#table')
 				var $btnHide = $('#btnHide')
-				var $btnDel = $('#btnDelete')
+				var $btnDelete = $('#btnDelete')
 
 				$(function() {
 					const triggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
@@ -146,10 +133,19 @@
 					})
 				})
 
-				$(".dropdown-menu li a").click(function(){
-					var text = $(this).text();
-					$(this).parents('.dropdown').find('.dropdown-toggle').html(text + ' <span class="caret"></span>');
-				});
+				$btnDelete.click(function () {
+					// Confirm deletion
+					if (confirm('This will delete all hidden papers older than a week. Are you sure you want to continue?')) {
+						$.ajax({url: "/drop", type: "POST",
+						success: function(response) {
+							show(response, 'alert-success')
+						},
+						error: function(xhr, status, errorThrown) {
+							show(xhr.responseText, 'alert-danger')
+						}
+					})
+					}
+				})
 			</script>
 		</div>
 	</body>

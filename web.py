@@ -1,9 +1,11 @@
+import datetime
 import feedparser
 import threading
 import pandas as pd
 import sqlite3
 import urllib.parse
 
+from datetime import date
 from flask import Flask, render_template, request, make_response
 from html.parser import HTMLParser
 from io import StringIO
@@ -80,6 +82,12 @@ class FlaskApp(object):
         thread.join()
         return self.alert
 
+    def drop(self):
+        thread = threading.Thread(target=self.delete_items, name="Delete hidden papers")
+        thread.start()
+        thread.join()
+        return self.alert
+
     def strip_tags(self, html):
         s = MLStripper()
         s.feed(html)
@@ -150,13 +158,31 @@ class FlaskApp(object):
         self.data = ''
         self.alert = f'Hid {cnt} records. Refresh to update data.'
 
+    def delete_items(self):
+        # Get date in yyyy-mm-dd format for 7 days before today
+        week_ago = (date.today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+        conn = sqlite3.connect('data.db')
+        c = conn.cursor()
+        # Delete items created over a week ago which are hidden
+        sql = f'DELETE FROM papers WHERE created < "{week_ago}" AND hide'
+        print(f'Delete SQL: {sql}')
+        c.execute(sql)
+        conn.commit()
+        cnt = c.rowcount
+        conn.close()
+        self.data = ''
+        if cnt == 0:
+            self.alert = f'No papers matching criteria. Did not delete any papers.'
+        else:
+            self.alert = f'Deleted {cnt} papers. Refresh to update data.'
+
 flask = Flask(__name__)
 app = FlaskApp(flask)
 # Add endpoints for the action function
 app.add_endpoint('/', 'index',  app.index, methods=['GET'])
 app.add_endpoint('/fetch', 'fetch', app.fetch, methods=['POST'])
 app.add_endpoint('/hide', 'hide', app.hide, methods=['POST'])
-# app.add_endpoint('/drop', 'drop', app.drop, methods=['POST'])
+app.add_endpoint('/drop', 'drop', app.drop, methods=['POST'])
 
 if __name__ == "__main__":
     app.run()
