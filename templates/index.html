@@ -6,21 +6,49 @@
 		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
 		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3" crossorigin="anonymous"></script>
 		<style>
-			.actions {
+			.actions-left {
 				margin-top: 8px;
 				margin-bottom: 8px;
 				float: left;
-				width: 100%;
+				width: auto;
+				display: flex;
+				gap: 8px;
+			}
+			.actions-right {
+				margin-top: 8px;
+				margin-bottom: 8px;
+				float: right;
+				width: auto;
+				display: flex;
+				gap: 8px;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
 			<h1>Papers</h1>
-			<div class="actions">
-				<div id="alert_cont"></div>
+			<div id="alert_cont"></div>
+			<div class="actions-left">
 				<a id="btnUpdate" class="btn btn-secondary" role="button" onclick="update()">Update</a>
-				<a id="btnDelete" class="btn btn-secondary" role="button">Delete</a>
+			</div>
+			<div class="actions-right">
+				<a id="btnHide" class="btn btn-info" role="button" data-bs-toggle="tooltip"
+					data-bs-title="Hide selected/checked papers so that they don't appear in the list">Hide</a>
+				<a id="btnDelete" class="btn btn-danger" role="button" data-bs-toggle="tooltip"
+					data-bs-title="Delete selected/checked papers so that they are removed permanently">Delete</a>
+				<div class="dropdown">
+					<button class="btn btn-info dropdown-toggle" type="button" id="btnDelType"
+						data-bs-toggle="dropdown" aria-expanded="false">
+						Selected Papers
+						<span class="caret"></span>
+					</button>
+					<ul class="dropdown-menu">
+						<li><a class="dropdown-item" href="#">Selected Papers</a></li>
+						<li><a class="dropdown-item" href="#">Added Yesterday</a></li>
+						<li><a class="dropdown-item" href="#">Added Day Before</a></li>
+						<li><a class="dropdown-item" href="#">Added 7+ Days Ago</a></li>
+					</ul>
+				</div>
 			</div>
 			<script>
 				function update() {
@@ -43,8 +71,8 @@
 				}
 			</script>
 			<div style="clear: both;"></div>
-			<table id="table" data-show-columns="true" data-pagination="true" data-search="true"
-				data-show-jump-to="true" data-sort-name="created" data-sort-order="desc">
+			<table id="table" data-show-columns="true" data-pagination="true" data-page-size="25" data-search="true"
+				data-show-jump-to="true" data-sort-name="created" data-click-to-select="true" data-sort-order="desc">
 				<thead>
 					<tr>
 						<th data-checkbox="true"></th>
@@ -67,9 +95,13 @@
 			<script src="https://unpkg.com/bootstrap-table@1.21.0/dist/extensions/sticky-header/bootstrap-table-sticky-header.min.js"></script>
 			<script>
 				var $table = $('#table')
+				var $btnHide = $('#btnHide')
 				var $btnDel = $('#btnDelete')
 
 				$(function() {
+					const triggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+					const tooltipList = [...triggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+
 					var data = [
 						{% for row in data %}
 							{
@@ -83,17 +115,17 @@
 					$table.bootstrapTable({data: data, stickyHeader: true, sortReset: true})
 				})
 
-				$table.on('click-row.bs.table', function (row, $element, field) {
+				$table.on('dbl-click-row.bs.table', function (row, $element, field) {
 					if (confirm('View the paper: ' + $element.title + '?')) {
 						// Open the paper page in a new tab
 						window.open($element.link)
 					}
 				})
 
-				$btnDel.click(function () {
+				$btnHide.click(function () {
 					var json = $table.bootstrapTable('getSelections')
 					if (json.length == 0) {
-						alert('No papers selected! Please select papers before trying to Delete.')
+						alert('No papers selected! Please select papers before trying to Hide.')
 						return
 					}
 					var list = ""
@@ -104,7 +136,7 @@
 							list = list + ", 'http://arxiv.org/abs/" + item.id + "'"
 						}
 					})
-					$.ajax({url: "/drop", type: "POST", contentType: 'application/json', data: {"items": list},
+					$.ajax({url: "/hide", type: "POST", contentType: 'application/json', data: {"items": list},
 						success: function(response) {
 							show(response, 'alert-success')
 						},
@@ -113,6 +145,11 @@
 						}
 					})
 				})
+
+				$(".dropdown-menu li a").click(function(){
+					var text = $(this).text();
+					$(this).parents('.dropdown').find('.dropdown-toggle').html(text + ' <span class="caret"></span>');
+				});
 			</script>
 		</div>
 	</body>

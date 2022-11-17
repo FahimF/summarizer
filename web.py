@@ -61,7 +61,7 @@ class FlaskApp(object):
     def index(self):
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
-        c.execute("SELECT id, created, title, link, author, brief FROM papers ORDER BY created DESC")
+        c.execute("SELECT id, created, title, link, author, brief FROM papers WHERE NOT hide ORDER BY created DESC")
         df = pd.DataFrame(c.fetchall(), columns=['id', 'created', 'title','link', 'author', 'brief'])
         conn.close()
         df['id'] = [i.replace('http://arxiv.org/abs/', '') for i in list(df['id'])]
@@ -73,9 +73,9 @@ class FlaskApp(object):
         thread.join()
         return self.alert
 
-    def drop(self, **kwargs):
+    def hide(self, **kwargs):
         self.data = kwargs['items']
-        thread = threading.Thread(target=self.delete_items, name="Delete papers")
+        thread = threading.Thread(target=self.hide_items, name="Hide papers")
         thread.start()
         thread.join()
         return self.alert
@@ -139,23 +139,24 @@ class FlaskApp(object):
         else:
             self.alert = f'Added {count} papers to the list: ' + ', '.join(added) + '. Refresh to load them.'
 
-    def delete_items(self):
+    def hide_items(self):
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
-        sql = f'DELETE FROM papers WHERE id IN ({self.data})'
+        sql = f'UPDATE papers SET hide = 1 WHERE id IN ({self.data})'
         c.execute(sql)
         conn.commit()
         cnt = c.rowcount
         conn.close()
         self.data = ''
-        self.alert = f'Deleted {cnt} records. Refresh to update data.'
+        self.alert = f'Hid {cnt} records. Refresh to update data.'
 
 flask = Flask(__name__)
 app = FlaskApp(flask)
 # Add endpoints for the action function
 app.add_endpoint('/', 'index',  app.index, methods=['GET'])
 app.add_endpoint('/fetch', 'fetch', app.fetch, methods=['POST'])
-app.add_endpoint('/drop', 'drop', app.drop, methods=['POST'])
+app.add_endpoint('/hide', 'hide', app.hide, methods=['POST'])
+# app.add_endpoint('/drop', 'drop', app.drop, methods=['POST'])
 
 if __name__ == "__main__":
     app.run()
