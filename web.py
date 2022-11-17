@@ -156,7 +156,7 @@ class FlaskApp(object):
         cnt = c.rowcount
         conn.close()
         self.data = ''
-        self.alert = f'Hid {cnt} records. Refresh to update data.'
+        self.alert = f'Hid {cnt} records.'
 
     def delete_items(self):
         # Get date in yyyy-mm-dd format for 7 days before today
@@ -174,7 +174,7 @@ class FlaskApp(object):
         if cnt == 0:
             self.alert = f'No papers matching criteria. Did not delete any papers.'
         else:
-            self.alert = f'Deleted {cnt} papers. Refresh to update data.'
+            self.alert = f'Deleted {cnt} papers.'
 
 flask = Flask(__name__)
 app = FlaskApp(flask)

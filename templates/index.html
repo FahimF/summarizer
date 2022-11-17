@@ -99,7 +99,15 @@
 						{% endfor %}
 					]
 
+					//  Load table
 					$table.bootstrapTable({data: data, stickyHeader: true, sortReset: true})
+
+					// If alert exists in storage, show it
+					if (localStorage.alert) {
+						show(localStorage.alert, 'alert-success')
+						// Remove alert from stroage
+						localStorage.removeItem("alert")
+					}
 				})
 
 				$table.on('dbl-click-row.bs.table', function (row, $element, field) {
@@ -125,7 +133,9 @@
 					})
 					$.ajax({url: "/hide", type: "POST", contentType: 'application/json', data: {"items": list},
 						success: function(response) {
-							show(response, 'alert-success')
+							// Save alert in local storage
+							localStorage.setItem("alert", response);
+							location.reload()
 						},
 						error: function(xhr, status, errorThrown) {
 							show(xhr.responseText, 'alert-danger')
@@ -138,7 +148,8 @@
 					if (confirm('This will delete all hidden papers older than a week. Are you sure you want to continue?')) {
 						$.ajax({url: "/drop", type: "POST",
 						success: function(response) {
-							show(response, 'alert-success')
+							localStorage.setItem("alert", response);
+							location.reload()
 						},
 						error: function(xhr, status, errorThrown) {
 							show(xhr.responseText, 'alert-danger')
